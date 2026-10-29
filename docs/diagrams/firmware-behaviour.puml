@@ -1,0 +1,74 @@
+@startuml
+left to right direction
+!theme plain
+skinparam backgroundColor #ECE3D0
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam nodesep 40
+skinparam ranksep 70
+skinparam padding 4
+
+skinparam state {
+  BackgroundColor #F7F0E1
+  BorderColor #1C1610
+  BorderThickness 1.4
+  FontColor #1C1610
+}
+
+skinparam note {
+  BackgroundColor #FBF6EA
+  BorderColor #1C1610
+  BorderThickness 1
+  FontColor #1C1610
+  FontSize 9
+}
+
+state "Boot" as Boot #E8DCC4
+state "Idle" as Idle #E8DCC4
+
+state "Linked" as Linked #D9C9A8 {
+  state "Awaiting" as Awaiting
+  state "Driving" as Driving #C9E0C8
+  state "ArmMoving" as ArmMoving #C9E0C8
+  state "Scanning" as Scanning #D0E0F0
+  state "Timeout" as Timeout #F0C8C8
+
+  [*] --> Awaiting
+  Awaiting --> Driving : drive cmd
+  Awaiting --> ArmMoving : SV cmd
+  Awaiting --> Scanning : SCAN cmd
+
+  Driving --> Awaiting : STOP
+  ArmMoving --> Awaiting : applied
+  Scanning --> Awaiting : done
+
+  Driving --> Timeout : 1500 ms idle
+  Timeout --> Driving : drive cmd
+  Timeout --> Awaiting : STOP
+}
+
+[*] --> Boot
+Boot --> Idle
+Idle --> Linked : client connects
+Linked --> Idle : client disconnects
+
+note right of Timeout
+  Safety watchdog latch
+  Motors force-stopped
+  NeoPixel red
+  Any valid command clears it
+end note
+
+note bottom of Scanning
+  Base servo sweeps 0 to 180
+  ToF sampled per step
+  Any command aborts
+end note
+
+note bottom of Driving
+  Client heartbeats every 350 ms
+  to prevent watchdog firing
+end note
+
+@enduml

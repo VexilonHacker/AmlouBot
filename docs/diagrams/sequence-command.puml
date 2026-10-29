@@ -1,0 +1,96 @@
+@startuml
+!theme plain
+skinparam backgroundColor #ECE3D0
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #1C1610
+  LifeLineBorderColor #1C1610
+  ParticipantBorderColor #1C1610
+  ParticipantBackgroundColor #F7F0E1
+  ActorBorderColor #1C1610
+  ActorBackgroundColor #E8DCC4
+  GroupBorderColor #1C1610
+  GroupBackgroundColor #FBF6EA
+  NoteBackgroundColor #FBF6EA
+  NoteBorderColor #1C1610
+}
+
+autonumber
+
+actor "Operator" as U
+participant "app.js\n(browser)" as UI
+participant "Flask bridge\n:1337" as F
+participant "ESP32\n:19820" as E
+participant "Hardware" as HW
+
+== Press and hold F ==
+U -> UI : pointerdown on F
+activate UI
+UI -> UI : log tx "F"
+UI -> F : POST /api/command\n{"cmd":"F"}
+activate F
+F -> E : "F\\n" over TCP
+activate E
+E -> E : processCommand("F")\nreset lastCMDTime
+E -> HW : Forward()\nsetMotor(...)
+E --> F : "OK\\n"
+deactivate E
+F --> UI : {"ok":true}
+deactivate F
+deactivate UI
+
+== Heartbeat every 350 ms while held ==
+group loop while pointer held
+  UI -> F : POST /api/command F
+  activate F
+  F -> E : "F\\n"
+  activate E
+  E -> E : reset lastCMDTime
+  E --> F : "OK\\n"
+  deactivate E
+  F --> UI : {"ok":true}
+  deactivate F
+end
+
+== Release ==
+U -> UI : pointerup
+activate UI
+UI -> UI : log tx "STOP"
+UI -> F : POST /api/command\n{"cmd":"STOP"}
+activate F
+F -> E : "STOP\\n"
+activate E
+E -> E : processCommand("STOP")
+E -> HW : Stop()\nmotors off
+E --> F : "OK\\n"
+deactivate E
+F --> UI : {"ok":true}
+deactivate F
+deactivate UI
+
+== Asynchronous delivery via polling ==
+loop every 900 ms
+  UI -> F : GET /api/status
+  activate F
+  F --> UI : {replies, telemetry, ts}
+  deactivate F
+  UI -> UI : log rx, render sensors
+end
+
+note over F, E
+  POST returns {"ok":true}
+  once sendall succeeds.
+  ACK and telemetry arrive
+  on the next /api/status poll.
+end note
+
+note over UI
+  Movement.set() keeps
+  one POST in flight.
+  New presses replace
+  the queued command.
+end note
+
+@enduml

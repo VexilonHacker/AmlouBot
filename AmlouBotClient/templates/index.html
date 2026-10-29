@@ -1,0 +1,625 @@
+ <!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#ece3d0">
+  <title>AmlouBot · Control Deck</title>
+
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.png') }}">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        media="print" onload="this.media='all'">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("amloubot.theme");
+        var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var theme = (saved === "dark" || saved === "light")
+          ? saved
+          : (prefersDark ? "dark" : "light");
+        document.documentElement.dataset.theme = theme;
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", theme === "dark" ? "#1a1612" : "#ece3d0");
+      } catch (e) {}
+    })();
+  </script>
+</head>
+
+<body data-mode="pad">
+  <div class="fx-grid" aria-hidden="true"></div>
+  <div class="fx-warm" aria-hidden="true"></div>
+  <div class="fx-grain" aria-hidden="true"></div>
+
+  <div class="app">
+
+    <header class="header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <img src="{{ url_for('static', filename='icons/icon.png') }}" alt="">
+        </div>
+        <div class="brand-text">
+          <h1>AmlouBot</h1>
+          <p>
+            <span class="dot-live"></span>
+            Control Deck · v3.4
+          </p>
+        </div>
+      </div>
+
+      <div class="header-meta">
+        <div class="chip" title="Robot TCP endpoint">
+          <span class="chip-key">TCP</span>
+          <span class="chip-val">{{ esp }}</span>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite">
+          <span class="status-ring"><span class="status-dot"></span></span>
+          <span class="status-label">Link</span>
+          <span id="statusText" class="status-value">Offline</span>
+        </div>
+
+        <button id="btnTheme" class="icon-btn" type="button"
+                aria-label="Toggle theme" title="Toggle theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2"/>
+            <path d="M12 20v2"/>
+            <path d="M4.93 4.93l1.41 1.41"/>
+            <path d="M17.66 17.66l1.41 1.41"/>
+            <path d="M2 12h2"/>
+            <path d="M20 12h2"/>
+            <path d="M4.93 19.07l1.41-1.41"/>
+            <path d="M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <button id="btnFullscreen" class="icon-btn" type="button"
+                aria-label="Toggle fullscreen" title="Fullscreen">
+          <svg class="icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 9V4h5"/>
+            <path d="M20 9V4h-5"/>
+            <path d="M4 15v5h5"/>
+            <path d="M20 15v5h-5"/>
+          </svg>
+          <svg class="icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 4v5H4"/>
+            <path d="M15 4v5h5"/>
+            <path d="M9 20v-5H4"/>
+            <path d="M15 20v-5h5"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+
+      <section class="panel" aria-labelledby="drive-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="drive-title" class="panel-title">
+            <span class="panel-index">01</span>
+            Drive
+          </h2>
+
+          <div class="mode-switch" role="tablist" aria-label="Control style">
+            <button type="button" class="mode-btn" data-mode="pad" role="tab" aria-selected="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/>
+                <rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/>
+                <rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/>
+                <rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>
+              </svg>
+              D-Pad
+            </button>
+            <button type="button" class="mode-btn" data-mode="stick" role="tab" aria-selected="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/>
+              </svg>
+              Joystick
+            </button>
+          </div>
+        </div>
+
+        <div class="mode-pad-only">
+          <p class="panel-hint panel-hint--sub">hold&nbsp;to&nbsp;move</p>
+
+          <div class="dpad-wrap">
+            <div class="dpad">
+              <button class="key" data-cmd="FL" aria-label="Forward left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 5l-5 5 5 5"/><path d="M5 10h8a6 6 0 0 1 6 6v3"/>
+                </svg>
+                <span class="key-cap">FL</span>
+              </button>
+              <button class="key" data-cmd="F" aria-label="Forward">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19V5"/><path d="M5 12l7-7 7 7"/>
+                </svg>
+                <span class="key-cap">F</span>
+              </button>
+              <button class="key" data-cmd="FR" aria-label="Forward right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 5l5 5-5 5"/><path d="M19 10h-8a6 6 0 0 0-6 6v3"/>
+                </svg>
+                <span class="key-cap">FR</span>
+              </button>
+
+              <button class="key" data-cmd="L" aria-label="Left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/>
+                </svg>
+                <span class="key-cap">L</span>
+              </button>
+
+              <button class="key key-stop" data-cmd="STOP" aria-label="Stop">
+                STOP
+              </button>
+
+              <button class="key" data-cmd="R" aria-label="Right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/><path d="M12 5l7 7-7 7"/>
+                </svg>
+                <span class="key-cap">R</span>
+              </button>
+
+              <button class="key" data-cmd="BL" aria-label="Backward left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 19l-5-5 5-5"/><path d="M5 14h8a6 6 0 0 0 6-6V5"/>
+                </svg>
+                <span class="key-cap">BL</span>
+              </button>
+              <button class="key" data-cmd="B" aria-label="Backward">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/>
+                </svg>
+                <span class="key-cap">B</span>
+              </button>
+              <button class="key" data-cmd="BR" aria-label="Backward right">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 19l5-5-5-5"/><path d="M19 14h-8a6 6 0 0 1-6-6V5"/>
+                </svg>
+                <span class="key-cap">BR</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-stick-only">
+          <p class="panel-hint panel-hint--sub">drag&nbsp;the&nbsp;stick&nbsp;·&nbsp;or&nbsp;use&nbsp;WASD&nbsp;+&nbsp;Q/E</p>
+
+          <div class="laptop-stage">
+            <div class="joystick" id="joystick" aria-label="Virtual joystick" role="application">
+              <span class="joy-crosshair joy-crosshair--h" aria-hidden="true"></span>
+              <span class="joy-crosshair joy-crosshair--v" aria-hidden="true"></span>
+              <span class="joy-tick joy-tick--n" aria-hidden="true">F</span>
+              <span class="joy-tick joy-tick--s" aria-hidden="true">B</span>
+              <span class="joy-tick joy-tick--w" aria-hidden="true">L</span>
+              <span class="joy-tick joy-tick--e" aria-hidden="true">R</span>
+              <span class="joy-ring" aria-hidden="true"></span>
+              <span class="joystick-knob" aria-hidden="true"></span>
+            </div>
+
+            <div class="key-hints">
+              <div class="key-hints-title">Keyboard</div>
+              <div class="key-hint-grid">
+                <span></span>
+                <kbd data-key="up">W</kbd>
+                <span></span>
+                <kbd data-key="left">A</kbd>
+                <kbd data-key="down">S</kbd>
+                <kbd data-key="right">D</kbd>
+              </div>
+              <p class="key-hints-note">
+                <kbd class="kbd-inline">Q</kbd> rotate L ·
+                <kbd class="kbd-inline">E</kbd> rotate R
+              </p>
+              <p class="key-hints-note">
+                Arrows also work · <kbd class="kbd-inline">Space</kbd> stops
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-rotate" data-cmd="RL">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>
+            </svg>
+            Rotate L
+          </button>
+          <button class="btn btn-rotate" data-cmd="RR">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/>
+            </svg>
+            Rotate R
+          </button>
+          <button class="btn btn-danger mode-stick-only" data-cmd="STOP" aria-label="Stop">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+            </svg>
+            Stop
+          </button>
+        </div>
+
+        <div class="console-head">
+          <span class="console-title">
+            <span class="panel-index panel-index--brown">LOG</span>
+            Console
+          </span>
+          <div class="console-tools">
+            <button id="downloadLog" class="console-clear" type="button" title="Download log">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 4v11"/>
+                <path d="M7 11l5 5 5-5"/>
+                <path d="M5 20h14"/>
+              </svg>
+              save
+            </button>
+            <button id="clearConsole" class="console-clear" type="button">clear</button>
+          </div>
+        </div>
+        <div id="console" class="console" aria-live="polite" aria-label="Command log"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="hand-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="hand-title" class="panel-title">
+            <span class="panel-index">02</span>
+            Robotic Hand
+          </h2>
+          <span class="panel-hint">0°&nbsp;–&nbsp;180°</span>
+        </div>
+
+        <div class="servos">
+          <div class="servo" data-servo="0">
+            <div class="servo-head">
+              <span class="servo-name">Base</span>
+              <span class="servo-readout"><span id="v0">105</span><i>°</i></span>
+            </div>
+            <input type="range" id="s0" min="0" max="180" value="105" step="1" aria-label="Base angle">
+            <div class="servo-foot"><span>0</span><span>CH 0</span><span>180</span></div>
+          </div>
+
+          <div class="servo" data-servo="1">
+            <div class="servo-head">
+              <span class="servo-name">Shoulder</span>
+              <span class="servo-readout"><span id="v1">180</span><i>°</i></span>
+            </div>
+            <input type="range" id="s1" min="0" max="180" value="180" step="1" aria-label="Shoulder angle">
+            <div class="servo-foot"><span>0</span><span>CH 1</span><span>180</span></div>
+          </div>
+
+          <div class="servo" data-servo="2">
+            <div class="servo-head">
+              <span class="servo-name">Grip</span>
+              <span class="servo-readout"><span id="v2">110</span><i>°</i></span>
+            </div>
+            <input type="range" id="s2" min="0" max="180" value="110" step="1" aria-label="Grip angle">
+            <div class="servo-foot"><span>0</span><span>CH 2</span><span>180</span></div>
+          </div>
+
+          <div class="servo" data-servo="3">
+            <div class="servo-head">
+              <span class="servo-name">Wrist</span>
+              <span class="servo-readout"><span id="v3">60</span><i>°</i></span>
+            </div>
+            <input type="range" id="s3" min="0" max="180" value="60" step="1" aria-label="Wrist angle">
+            <div class="servo-foot"><span>0</span><span>CH 3</span><span>180</span></div>
+          </div>
+        </div>
+
+        <div class="row row-end">
+          <button id="btnHome" class="btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>
+            </svg>
+            Home
+          </button>
+          <button id="btnSend" class="btn btn-primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+            Send
+          </button>
+        </div>
+      </section>
+
+      <section class="panel panel-lights" aria-labelledby="lights-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="lights-title" class="panel-title">
+            <span class="panel-index panel-index--lights">03</span>
+            Front Lights
+          </h2>
+          <span id="lightsState" class="panel-hint">off</span>
+        </div>
+
+        <div class="lights-row lights-row--5">
+          <button class="btn btn-light" data-led="LED,OFF" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="8"/>
+              <path d="M9 9l6 6M15 9l-6 6"/>
+            </svg>
+            Off
+          </button>
+          <button class="btn btn-light" data-led="LED,ON" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/>
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+            </svg>
+            On
+          </button>
+          <button class="btn btn-light btn-light--auto" data-led="AUTO" type="button"
+                  title="Auto: turn lights on when it gets dark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              <path d="M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1l2.1-2.1M17 7l2.1-2.1"
+                    stroke-dasharray="2 2" opacity="0.7"/>
+            </svg>
+            Auto
+          </button>
+          <button class="btn btn-light" data-led="LED,BLINK" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <path d="M12 3v3M12 18v3"/>
+            </svg>
+            Blink
+          </button>
+          <button class="btn btn-light" data-led="LED,ALT" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12h4l2-5 4 10 2-5h6"/>
+            </svg>
+            Alt
+          </button>
+        </div>
+      </section>
+
+      <section class="panel panel-sensors" aria-labelledby="sensors-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="sensors-title" class="panel-title">
+            <span class="panel-index panel-index--sage">04</span>
+            Sensors
+          </h2>
+          <span id="sensorsAge" class="panel-hint">waiting…</span>
+        </div>
+
+        <div class="sensor-grid" id="sensorGrid">
+          <div class="sensor" data-key="t">
+            <span class="sensor-label">Temp</span>
+            <span class="sensor-value"><span data-val="t">—</span><i>°C</i></span>
+          </div>
+          <div class="sensor" data-key="h">
+            <span class="sensor-label">Humidity</span>
+            <span class="sensor-value"><span data-val="h">—</span><i>%</i></span>
+          </div>
+          <div class="sensor" data-key="dp">
+            <span class="sensor-label">Dew Pt</span>
+            <span class="sensor-value"><span data-val="dp">—</span><i>°C</i></span>
+          </div>
+          <div class="sensor" data-key="p">
+            <span class="sensor-label">Pressure</span>
+            <span class="sensor-value"><span data-val="p">—</span><i>hPa</i></span>
+          </div>
+          <div class="sensor" data-key="alt">
+            <span class="sensor-label">Altitude</span>
+            <span class="sensor-value"><span data-val="alt">—</span><i>m</i></span>
+          </div>
+          <div class="sensor" data-key="dist">
+            <span class="sensor-label">Distance</span>
+            <span class="sensor-value"><span data-val="dist">—</span><i>mm</i></span>
+          </div>
+          <div class="sensor" data-key="bv">
+            <span class="sensor-label">Battery</span>
+            <span class="sensor-value"><span data-val="bv">—</span><i>V</i></span>
+          </div>
+          <div class="sensor" data-key="c">
+            <span class="sensor-label">Current</span>
+            <span class="sensor-value"><span data-val="c">—</span><i>mA</i></span>
+          </div>
+          <div class="sensor" data-key="pw">
+            <span class="sensor-label">Power</span>
+            <span class="sensor-value"><span data-val="pw">—</span><i>mW</i></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-gps" aria-labelledby="gps-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="gps-title" class="panel-title">
+            <span class="panel-index panel-index--gps">05</span>
+            GPS
+          </h2>
+          <span id="gpsFix" class="panel-hint">no fix</span>
+        </div>
+
+        <div class="sensor-grid sensor-grid--gps">
+          <div class="sensor" data-key="lat">
+            <span class="sensor-label">Latitude</span>
+            <span class="sensor-value"><span data-val="lat">—</span><i>°</i></span>
+          </div>
+          <div class="sensor" data-key="lon">
+            <span class="sensor-label">Longitude</span>
+            <span class="sensor-value"><span data-val="lon">—</span><i>°</i></span>
+          </div>
+          <div class="sensor" data-key="galt">
+            <span class="sensor-label">GPS Alt</span>
+            <span class="sensor-value"><span data-val="galt">—</span><i>m</i></span>
+          </div>
+          <div class="sensor" data-key="spd">
+            <span class="sensor-label">Speed</span>
+            <span class="sensor-value"><span data-val="spd">—</span><i>km/h</i></span>
+          </div>
+          <div class="sensor" data-key="crs">
+            <span class="sensor-label">Course</span>
+            <span class="sensor-value"><span data-val="crs">—</span><i>°</i></span>
+          </div>
+          <div class="sensor" data-key="sats">
+            <span class="sensor-label">Satellites</span>
+            <span class="sensor-value"><span data-val="sats">—</span><i>sats</i></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-light" aria-labelledby="light-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="light-title" class="panel-title">
+            <span class="panel-index panel-index--light">06</span>
+            Ambient Light
+          </h2>
+          <span id="lightStatus" class="panel-hint">—</span>
+        </div>
+
+        <div class="sensor-grid sensor-grid--light">
+          <div class="sensor" data-key="lux">
+            <span class="sensor-label">Illuminance</span>
+            <span class="sensor-value"><span data-val="lux">—</span><i>lx</i></span>
+          </div>
+          <div class="sensor" data-key="uvi">
+            <span class="sensor-label">UV Index</span>
+            <span class="sensor-value"><span data-val="uvi">—</span><i>UVI</i></span>
+          </div>
+          <div class="sensor" data-key="als">
+            <span class="sensor-label">ALS (raw)</span>
+            <span class="sensor-value"><span data-val="als">—</span><i>cnt</i></span>
+          </div>
+          <div class="sensor" data-key="uvs">
+            <span class="sensor-label">UVS (raw)</span>
+            <span class="sensor-value"><span data-val="uvs">—</span><i>cnt</i></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-scan" aria-labelledby="scan-title">
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <div class="panel-head">
+          <h2 id="scan-title" class="panel-title">
+            <span class="panel-index panel-index--scan">07</span>
+            Environment Scan
+          </h2>
+          <span id="scanStatus" class="panel-hint">idle</span>
+        </div>
+
+        <div class="scan-controls">
+          <label class="scan-step">
+            <span>Step</span>
+            <select id="scanStep">
+              <option value="1">1°</option>
+              <option value="2" selected>2°</option>
+              <option value="5">5°</option>
+              <option value="10">10°</option>
+            </select>
+          </label>
+
+          <button id="btnScanStart" class="btn btn-primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/>
+            </svg>
+            Start Scan
+          </button>
+
+          <button id="btnScanStop" class="btn btn-danger" type="button" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+            </svg>
+            Abort
+          </button>
+        </div>
+
+        <div class="scan-stage">
+          <canvas id="scanCanvas" class="scan-canvas"></canvas>
+        </div>
+
+        <div class="scan-stats">
+          <span class="scan-stat"><b>Points</b><i id="scanCount">0/0</i></span>
+          <span class="scan-stat"><b>Valid</b><i id="scanValid">0</i></span>
+          <span class="scan-stat"><b>Range</b><i id="scanMax">—</i></span>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <span>AmlouBot</span>
+      <span class="dot-sep"></span>
+      <span>ESP32 / Async TCP (⌐■_■)</span>
+      <span class="dot-sep"></span>
+      <span class="footer-live">● READY</span>
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html> 

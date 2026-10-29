@@ -1,0 +1,65 @@
+@startuml
+!theme plain
+skinparam backgroundColor #ECE3D0
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 10
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #1C1610
+  LifeLineBorderColor #1C1610
+  ParticipantBorderColor #1C1610
+  ParticipantBackgroundColor #F7F0E1
+  GroupBorderColor #1C1610
+  GroupBackgroundColor #FBF6EA
+}
+
+autonumber
+
+participant "Web UI\n(radar canvas)" as UI
+participant "Flask\n(bridge)" as F
+participant "ESP32\n(scan FSM)" as E
+participant "VL53L1X\n(ToF)" as T
+
+== Scan start ==
+UI -> F : POST /api/command\n{"cmd":"SCAN,2"}
+activate F
+F -> E : "SCAN,2\\n" over TCP
+activate E
+E --> F : "OK\\n"
+F --> UI : {"ok":true}
+deactivate F
+E -> E : servoWrite(CH_BASE, 0)\nwait SCAN_SETTLE_MS (150 ms)
+
+== Per-angle sampling ==
+loop for each angle 0 to 180, step 2
+  E -> T : read range
+  T --> E : mm (or timeout)
+  E -> E : retry once\non invalid or timeout
+  E --> F : {"scan":1,"i":n,"ang":a,"d":mm,...}
+  F -> F : append to scan buffer
+  E -> E : servoWrite(CH_BASE, a + step)\nwait SCAN_STEP_MS (85 ms)
+end
+
+== Scan complete ==
+E --> F : {"scan":1,"done":1,"n":91}
+E -> E : servoWrite(CH_BASE, 105)
+deactivate E
+
+== UI polling while active ==
+loop every 100 ms\n(1500 ms when idle)
+  UI -> F : GET /api/scan
+  activate F
+  F --> UI : {active, n, count, points}
+  deactivate F
+  UI -> UI : redraw radar canvas
+end
+
+== Abort anytime ==
+UI -> F : POST {"cmd":"SCAN,STOP"}
+activate F
+F -> E : "SCAN,STOP\\n" over TCP
+F --> UI : {"ok":true}
+deactivate F
+E -> E : scanActive = false\nservoWrite(CH_BASE, 105)
+
+@enduml

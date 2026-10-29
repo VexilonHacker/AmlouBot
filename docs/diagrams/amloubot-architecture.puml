@@ -1,0 +1,107 @@
+@startuml
+!theme plain
+left to right direction
+skinparam backgroundColor #ECE3D0
+skinparam defaultFontName "JetBrains Mono"
+skinparam defaultFontSize 10
+skinparam nodesep 30
+skinparam ranksep 150
+skinparam shadowing false
+skinparam linetype ortho
+
+skinparam node {
+  BorderColor #1C1610
+  BorderThickness 2
+  FontColor #1C1610
+  FontStyle bold
+}
+
+skinparam package {
+  BackgroundColor #F7F0E1
+  BorderColor #1C1610
+  BorderThickness 1.4
+  FontColor #1C1610
+  FontStyle bold
+}
+
+skinparam rectangle {
+  BackgroundColor #FBF6EA
+  BorderColor #1C1610
+  BorderThickness 1
+  FontColor #1C1610
+}
+
+skinparam note {
+  BackgroundColor #FBF6EA
+  BorderColor #1C1610
+  BorderThickness 1
+  FontColor #1C1610
+  FontSize 10
+}
+
+node "Browser\nlocalhost:1337" as web #E8DCC4 {
+  rectangle "app.js\nvanilla JS UI" as appjs
+  rectangle "HTML5 Canvas\nradar rendering" as canvas
+}
+
+node "Flask Bridge\nAmlouBotClient :1337" as flask #D9C9A8 {
+  rectangle "AmloBotControlCenter.py\nHTTP <-> TCP bridge" as bridge
+  rectangle "background thread\nlink + drain" as link
+}
+
+node "ESP32-S3\nAmlouBotFirmware :19820" as esp #C9B89A {
+  rectangle "AsyncTCP server" as tcp
+  rectangle "command dispatcher" as disp
+  rectangle "telemetry loop 1 Hz" as tel
+  rectangle "scan FSM" as scan
+}
+
+package "I2C Sensors" as i2c {
+  rectangle "AHTX0\ntemp + humidity" as aht
+  rectangle "BMP280\npressure + altitude" as bmp
+  rectangle "VL53L1X\nToF distance" as vlx
+  rectangle "INA219\npower telemetry" as ina
+  rectangle "LTR390\nlux + UV" as ltr
+}
+
+package "UART" as ser {
+  rectangle "TinyGPSPlus\n9600 baud" as gps
+}
+
+package "Actuators" as act {
+  rectangle "8x DC pins\n2 H-bridges" as motors
+  rectangle "4x servos\nLEDC PWM" as servos
+  rectangle "2x front LEDs" as leds
+  rectangle "NeoPixel\nstatus" as neo
+}
+
+web <--> flask
+note on link
+  HTTP
+  poll /status 900 ms
+  POST /command
+end note
+
+flask <--> esp
+note on link
+  TCP :19820
+  newline-delimited
+  commands down
+  telemetry up
+end note
+
+esp --> i2c : I2C
+esp --> ser : UART
+esp --> act : GPIO
+
+note top of web
+  Browser joins Wi-Fi AP "AmlouBot"
+  Robot lives at 192.168.1.1
+end note
+
+note bottom of esp
+  Runs in Wi-Fi Access Point mode.
+  No router required.
+end note
+
+@enduml
